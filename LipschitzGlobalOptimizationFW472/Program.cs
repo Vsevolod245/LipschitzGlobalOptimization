@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace LipschitzGlobalOptimizationFW472
@@ -22,13 +20,13 @@ namespace LipschitzGlobalOptimizationFW472
                 a = 0;
                 b = 0;
                 r = 0;
-                Console.WriteLine("Type Kmax");
-                if(!int.TryParse(Console.ReadLine(), out Kmax))
+                Console.WriteLine("Type Kmax > 2");
+                if (!int.TryParse(Console.ReadLine(), out Kmax))
                 {
                     Console.Clear();
                     Console.WriteLine("Ошибка ввода. Попробуйте еще раз.");
                     continue;
-                }    
+                }
                 Console.WriteLine("Type a");
                 if (!float.TryParse(Console.ReadLine(), out a))
                 {
@@ -43,7 +41,7 @@ namespace LipschitzGlobalOptimizationFW472
                     Console.WriteLine("Ошибка ввода. Попробуйте еще раз.");
                     continue;
                 }
-                Console.WriteLine("Type r");
+                Console.WriteLine("Type r > 1");
                 if (!float.TryParse(Console.ReadLine(), out r))
                 {
                     Console.Clear();
@@ -52,8 +50,18 @@ namespace LipschitzGlobalOptimizationFW472
                 }
                 break;
             }
-            var LGO = new LGO();
-            LGO.Optimize(Kmax, a, b, r);
+            long BestTime = long.MaxValue;
+            //for (int i = 0; i < 100; i++)
+            //{
+                var stopwatch = new System.Diagnostics.Stopwatch();
+                var LGO = new LGO();
+                stopwatch.Start();
+                LGO.Optimize(Kmax, a, b, r);
+                stopwatch.Stop();
+                //if (stopwatch.ElapsedMilliseconds<BestTime) BestTime = stopwatch.ElapsedMilliseconds;
+            //}
+            Console.WriteLine($"Execution Time: {stopwatch.ElapsedMilliseconds} ms");
+            //Console.WriteLine($"Execution Time: {BestTime} ms");
             Console.WriteLine("END");
             Console.ReadKey();
         }
@@ -69,28 +77,22 @@ namespace LipschitzGlobalOptimizationFW472
         }
         public void Optimize(int Kmax, float a, float b, float r)
         {
-            #region First tests on boarders
             FirstTests(a);
             FirstTests(b);
-            #endregion
             int k = 2;
             var Delta = b - a;
-            while (Delta > 0.01f)
+            while (Delta > 0.0001f && k < Kmax)
             {
-               Delta = SelectNextValues(r, Delta);
+                Delta = SelectNextValues(r, Delta);
+                k++;
             }
             int minIndex = 0;
             for (int i = 1; i < xUp.Count; i++)
             {
                 if (zUp[i] < zUp[i - 1]) minIndex = i;
-
             }
-            Console.WriteLine("Minimum is in x = "+ xUp[minIndex]+" f(x) = " + zUp[minIndex]);
+            Console.WriteLine("Minimum is in x = " + xUp[minIndex] + " f(x) = " + zUp[minIndex]);
         }
-        //private float SelectNextValue()
-        //{
-
-        //}
         private float SelectNextValues(float r, float Delta)
         {
             var xDown = new List<float>(xUp);
@@ -104,14 +106,14 @@ namespace LipschitzGlobalOptimizationFW472
             bool unsorted = true;
             while (unsorted)
             {
-                unsorted= false;
-                for(int i = 1; i < Rs.Length; i++)
+                unsorted = false;
+                for (int i = 1; i < Rs.Length; i++)
                 {
                     if (Rs[i].Item1 <= Rs[i - 1].Item1) continue;
                     (float, int) buffer1 = (Rs[i].Item1, Rs[i].Item2);
-                    (float, int) buffer2 = (Rs[i-1].Item1, Rs[i-1].Item2);
+                    (float, int) buffer2 = (Rs[i - 1].Item1, Rs[i - 1].Item2);
                     Rs[i] = buffer2;
-                    Rs[i-1] = buffer1;
+                    Rs[i - 1] = buffer1;
                     unsorted = true;
                 }
             }
@@ -151,15 +153,19 @@ namespace LipschitzGlobalOptimizationFW472
             }
             var xUpNew = new float[TestSubjects.Count];
 
+            //for (int i = 0; i < TestSubjects.Count; i++)
+            //{
+            //    xUpNew[i] = TestValue(xMinus[i], x[i], m);
+            //}
             Parallel.For(0, TestSubjects.Count, ParallelOptions, i =>
             {
                 xUpNew[i] = TestValue(xMinus[i], x[i], m);
             });
-
-            xUp.AddRange(xUpNew);
-            foreach(var xUp in xUpNew)
+            for (int i = 0; i < xUpNew.Length; i++)
             {
-                zUp.Add(Function(xUp));
+                if (xUp.Contains(xUpNew[i])) continue;
+                xUp.Add(xUpNew[i]);
+                zUp.Add(Function(xUpNew[i]));
             }
             return Delta;
         }
@@ -174,11 +180,11 @@ namespace LipschitzGlobalOptimizationFW472
             var zMinus = Function(xMinus);
             var Numerator = z - zMinus;
             Numerator = Numerator * Numerator;
-            return m*(x - xMinus)+Numerator/(m*(x-  xMinus))-2f*(m*(z+zMinus));
+            return m * (x - xMinus) + Numerator / (m * (x - xMinus)) - 2f * (m * (z + zMinus));
         }
         private float Calculate_m(float[] xValues, float r)
         {
-            var CandidatesM = new float [xValues.Length-1];
+            var CandidatesM = new float[xValues.Length - 1];
             for (int i = 1; i < xValues.Length; i++)
             {
                 CandidatesM[i - 1] = Math.Abs((Function(xValues[i]) - Function(xValues[i - 1])) / (xValues[i] - xValues[i - 1]));
