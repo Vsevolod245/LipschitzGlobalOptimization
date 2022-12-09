@@ -111,15 +111,7 @@ namespace LipschitzGlobalOptimizationFW472
 
             var p = Environment.ProcessorCount - 1;
 
-
-
-
-
-
-
-
-
-
+            var ParallelOptions = new ParallelOptions();
 
             var TestSubjects = new List<int>();
             if (xUp.Count - 1 < p)
@@ -127,7 +119,10 @@ namespace LipschitzGlobalOptimizationFW472
                 for (int i = 0; i < Rs.Length; i++)
                 {
                     TestSubjects.Add(Rs[i].Item2);
+                    var DeltaT = xDown[i + 1] - xDown[i];
+                    if (Delta > DeltaT) Delta = DeltaT;
                 }
+                ParallelOptions.MaxDegreeOfParallelism = xUp.Count - 1;
             }
             else
             {
@@ -135,6 +130,7 @@ namespace LipschitzGlobalOptimizationFW472
                 {
                     TestSubjects.Add(Rs[i].Item2);
                 }
+                ParallelOptions.MaxDegreeOfParallelism = p;
             }
 
             var xMinus = new float[TestSubjects.Count];
@@ -143,12 +139,14 @@ namespace LipschitzGlobalOptimizationFW472
             {
                 xMinus[i] = xDown[TestSubjects[i] - 1];
                 x[i] = xDown[TestSubjects[i]];
+                var DeltaT = x[i] - xMinus[i];
+                if (Delta > DeltaT) Delta = DeltaT;
             }
             var xUpNew = new float[TestSubjects.Count];
 
-            Parallel.For(0, TestSubjects.Count, i =>
+            Parallel.For(0, TestSubjects.Count, ParallelOptions, i =>
             {
-                xUpNew[i] =  TestValue(xMinus[i], x[i], m);
+                xUpNew[i] = TestValue(xMinus[i], x[i], m);
             });
 
             xUp.AddRange(xUpNew);
