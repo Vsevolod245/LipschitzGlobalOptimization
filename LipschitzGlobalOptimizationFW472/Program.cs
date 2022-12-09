@@ -79,6 +79,13 @@ namespace LipschitzGlobalOptimizationFW472
             {
                Delta = SelectNextValues(r, Delta);
             }
+            int minIndex = 0;
+            for (int i = 1; i < xUp.Count; i++)
+            {
+                if (zUp[i] < zUp[i - 1]) minIndex = i;
+
+            }
+            Console.WriteLine("Minimum is in x = "+ xUp[minIndex]+" f(x) = " + zUp[minIndex]);
         }
         //private float SelectNextValue()
         //{
