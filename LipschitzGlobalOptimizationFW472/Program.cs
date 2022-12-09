@@ -107,7 +107,7 @@ namespace LipschitzGlobalOptimizationFW472
                 unsorted= false;
                 for(int i = 1; i < Rs.Length; i++)
                 {
-                    if (Rs[i].Item1 < Rs[i - 1].Item1) continue;
+                    if (Rs[i].Item1 <= Rs[i - 1].Item1) continue;
                     (float, int) buffer1 = (Rs[i].Item1, Rs[i].Item2);
                     (float, int) buffer2 = (Rs[i-1].Item1, Rs[i-1].Item2);
                     Rs[i] = buffer2;
@@ -197,8 +197,7 @@ namespace LipschitzGlobalOptimizationFW472
         {
             var zMinus = Function(xMinusValue);
             var z = Function(xValue);
-            float xUp = 0.5f * (xValue + xMinusValue) - (z - zMinus) / (2f * m);
-            return Function(xUp);
+            return 0.5f * (xValue + xMinusValue) - (z - zMinus) / (2f * m);
         }
 
     }
