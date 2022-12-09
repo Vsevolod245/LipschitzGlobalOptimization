@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -60,6 +61,7 @@ namespace LipschitzGlobalOptimizationFW472
     internal class LGO
     {
         private List<float> zUp = new List<float>();
+        private List<float> xUp = new List<float>();
 
         private float Function(float x)
         {
@@ -72,15 +74,94 @@ namespace LipschitzGlobalOptimizationFW472
             FirstTests(b);
             #endregion
             int k = 2;
-
+            var Delta = b - a;
+            while (Delta > 0.01f)
+            {
+               Delta = SelectNextValues(r, Delta);
+            }
         }
-        private float SelectNextValue(int k)
-        {
+        //private float SelectNextValue()
+        //{
 
+        //}
+        private float SelectNextValues(float r, float Delta)
+        {
+            var xDown = new List<float>(xUp);
+            xDown.Sort();
+            var m = Calculate_m(xDown.ToArray(), r);
+            var Rs = new (float, int)[xDown.Count - 1];
+            for (int i = 1; i < xDown.Count; i++)
+            {
+                Rs[i - 1] = (CalculateR(xDown[i - 1], xDown[i], m), i);
+            }
+            bool unsorted = true;
+            while (unsorted)
+            {
+                unsorted= false;
+                for(int i = 1; i < Rs.Length; i++)
+                {
+                    if (Rs[i].Item1 < Rs[i - 1].Item1) continue;
+                    (float, int) buffer1 = (Rs[i].Item1, Rs[i].Item2);
+                    (float, int) buffer2 = (Rs[i-1].Item1, Rs[i-1].Item2);
+                    Rs[i] = buffer2;
+                    Rs[i-1] = buffer1;
+                    unsorted = true;
+                }
+            }
+
+            var p = Environment.ProcessorCount - 1;
+
+
+
+
+
+
+
+
+
+
+
+            var TestSubjects = new List<int>();
+            if (xUp.Count - 1 < p)
+            {
+                for (int i = 0; i < Rs.Length; i++)
+                {
+                    TestSubjects.Add(Rs[i].Item2);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < p; i++)
+                {
+                    TestSubjects.Add(Rs[i].Item2);
+                }
+            }
+
+            var xMinus = new float[TestSubjects.Count];
+            var x = new float[TestSubjects.Count];
+            for (int i = 0; i < TestSubjects.Count; i++)
+            {
+                xMinus[i] = xDown[TestSubjects[i] - 1];
+                x[i] = xDown[TestSubjects[i]];
+            }
+            var xUpNew = new float[TestSubjects.Count];
+
+            Parallel.For(0, TestSubjects.Count, i =>
+            {
+                xUpNew[i] =  TestValue(xMinus[i], x[i], m);
+            });
+
+            xUp.AddRange(xUpNew);
+            foreach(var xUp in xUpNew)
+            {
+                zUp.Add(Function(xUp));
+            }
+            return Delta;
         }
         private void FirstTests(float xValue)
         {
             zUp.Add(Function(xValue));
+            xUp.Add(xValue);
         }
         private float CalculateR(float xMinus, float x, float m)
         {
@@ -93,7 +174,7 @@ namespace LipschitzGlobalOptimizationFW472
         private float Calculate_m(float[] xValues, float r)
         {
             var CandidatesM = new float [xValues.Length-1];
-            for(int i = 1; i< xValues.Length; i++)
+            for (int i = 1; i < xValues.Length; i++)
             {
                 CandidatesM[i - 1] = Math.Abs((Function(xValues[i]) - Function(xValues[i - 1])) / (xValues[i] - xValues[i - 1]));
             }
